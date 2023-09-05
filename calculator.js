@@ -63,21 +63,38 @@ class Line {
                 continue
             }
 
-            if (char.match(/[+*/^-]/)) {
-
-                this.tokens.push(new Token("operator", char))
-
-            } else if (char.match(/[0-9]/)) {
-
+            let getNumber = () => {
                 do {
                     buffer += this.input[this.position]
                     this.position++
-                } while (this.input[this.position]?.match(/[0-9]/))
+                } while (this.input[this.position]?.match(/[0-9.]/))
                 this.position--
 
                 this.tokens.push(new Token("number", buffer))
                 buffer = ""
+            }
 
+            if (char == "-") {
+                const prevChar = this.input[this.position - 1]
+                if (!prevChar || prevChar.match(/[+*/^(,=-]/)) {
+                    // negative number
+                    const nextChar = this.input[this.position + 1]
+                    if (nextChar.match(/[a-zA-Z(]/)) {
+                        // multiply by -1
+                        this.tokens.push(new Token("number", "-1"))
+                        this.tokens.push(new Token("operator", "*"))
+                        //this.position++
+                    } else {
+                        getNumber()
+                    }
+                } else {
+                    // operation
+                    this.tokens.push(new Token("operator", "-"))
+                }
+            } else if (char.match(/[+*/^]/)) {
+                this.tokens.push(new Token("operator", char))
+            } else if (char.match(/[0-9.]/)) {
+                getNumber()
             } else if (char.match(/[a-zA-Z]/)) {
 
                 do {
@@ -257,7 +274,11 @@ class Line {
     #evaluateNode(node) {
 
         if (node.type == 'number') {
-            return parseFloat(node.value)
+            let num = Number(node.value)
+            if (isNaN(num)) {
+                throw new Error("Number \"" + node.value + "\" was not able to be parsed.")
+            }
+            return num
         } else if (node.type == "variable") {
 
             let varAnswer = this.variables?.[node.value]
@@ -403,6 +424,9 @@ class Calculator {
             cos: (a) => `Math.cos(${a})`,
             tan: (a) => `Math.tan(${a})`,
             sqrt: (a) => `Math.sqrt(${a})`,
+            abs: (a) => `Math.abs(${a})`,
+            ln: (a) => `Math.log(${a})`,
+            round: (a) => `Math.round(${a})`,
         }
 
         this.lines = input.split("\n").map(line => new Line(line, this.variables, this.functions))
@@ -430,7 +454,9 @@ class Calculator {
             line.tokenize()
             line.parse()
             answer = this.lines[this.currentLine].evaluate()
-        } catch (e) {}
+        } catch (e) {
+            // console.log(e)
+        }
         this.answers.push(answer)
         this.variables["ans"] = this.answers.at(-1)
         this.currentLine++
@@ -438,4 +464,4 @@ class Calculator {
     }
 }
 
-// TODO line reference support
+// TODO negative support

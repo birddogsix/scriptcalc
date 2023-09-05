@@ -11,15 +11,15 @@
 
   <div class="editor">
     <div id="lineNumbers"></div>
-    <textarea onkeyup="updateCalculations(event)" spellcheck="false"></textarea>
+    <textarea onkeyup="updateCalculations(event.target)" id="codeText" spellcheck="false"></textarea>
     <div id="calcAnswers"></div>
   </div>
 
 </body>
 
 <foot>
-  <script src="notepad.js"></script>
   <script src="calculator.js"></script>
+  <script src="notepad.js"></script>
 </foot>
 
 </html>
