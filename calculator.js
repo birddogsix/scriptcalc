@@ -125,6 +125,8 @@ class Line {
                 this.tokens.push(new Token("comma", char))
             } else if (char == "=") {
                 this.tokens.push(new Token("assignment", char))
+            } else {
+                throw new Error("Unknown character \"" + char + "\".")
             }
 
             this.position++
@@ -345,9 +347,7 @@ class Line {
             // Handle function evaluation
             return this.#evaluateFunction(node)
         } else {
-
             throw new Error("Invalid node type \"" + node.type + "\".")
-
         }
 
 
@@ -394,11 +394,15 @@ class Line {
         return this.answer
     }
 
-    #formatEquation(node, parameters) {
+    #formatEquation(node) {
         if (node.type == "function") {
             // TODO finish function replacement
+            let currentFunc = this.functions[node.value]
             let subParameters = node.children.map(child => this.#formatEquation(child))
-            return this.functions[node.value](subParameters)
+            if (subParameters.length != currentFunc.length) {
+                throw new Error("Incorrect number of parameters for the function \"" + node.value + "\".")
+            }
+            return currentFunc(...subParameters)
         } else if (node.type == "operator") {
             let left = this.#formatEquation(node.children[0])
             let right = this.#formatEquation(node.children[1])
@@ -413,7 +417,7 @@ class Line {
 }
 
 class Calculator {
-    constructor(input) {
+    constructor(input, debug = false) {
 
         this.variables = {
             e: Math.E,
@@ -429,6 +433,7 @@ class Calculator {
             round: (a) => `Math.round(${a})`,
         }
 
+        this.debug = debug
         this.lines = input.split("\n").map(line => new Line(line, this.variables, this.functions))
         this.currentLine = 0
         this.answers = []
@@ -447,6 +452,14 @@ class Calculator {
         return this.answers
     }
 
+    enableDebug() {
+        this.debug = true
+    }
+
+    disableDebug() {
+        this.debug = false
+    }
+
     solveNext() {
         let line = this.lines[this.currentLine]
         let answer
@@ -455,7 +468,7 @@ class Calculator {
             line.parse()
             answer = this.lines[this.currentLine].evaluate()
         } catch (e) {
-            // console.log(e)
+            if (this.debug) console.log(e)
         }
         this.answers.push(answer)
         this.variables["ans"] = this.answers.at(-1)
@@ -463,5 +476,3 @@ class Calculator {
         return answer
     }
 }
-
-// TODO negative support

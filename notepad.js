@@ -9,7 +9,7 @@ const codeText = document.querySelector("#codeText")
 
 function updateCalculations(target) {
     text = target.value
-    const calculator = new Calculator(text)
+    const calculator = new Calculator(text, true)
     let answersHTML = calculator.solveAll().join("<br>")
     // calculator.lines.forEach(l=>console.log(l.tokens,l.ast))
     calcAnswers.innerHTML = answersHTML
