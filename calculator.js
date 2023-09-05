@@ -329,7 +329,7 @@ class Line {
 
                 let functionString = `(${functionParameters})=>\`${formattedEquation}\``
 
-                this.functions[functionName] = eval(functionString)
+                this.functions[functionName] = eval(functionString) // TODO: variables and functions arent working here
 
                 return
 
@@ -382,12 +382,12 @@ class Line {
         if (currentFunction.length != node.children.length) {
             throw new Error("Not the correct number of arguments for the function \"" + node.value + "\"")
         }
-        let answer = eval(currentFunction(...childrenAnswers))
-        if (answer) {
-            return answer
-        } else {
-            throw new Error("Invalid function call")
-        }
+        let formulaText = currentFunction(...childrenAnswers)
+        let formulaCalculator = new Line(formulaText, this.variables, this.functions)
+        formulaCalculator.tokenize()
+        formulaCalculator.parse()
+        let answer = formulaCalculator.evaluate()
+        return answer
     }
 
     getStoredAnswer() {
