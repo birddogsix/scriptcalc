@@ -78,6 +78,9 @@ class Line {
                     this.position++
                 } while (this.input[this.position]?.match(/[0-9.]/))
 
+                if (buffer == ".") {
+                    throw new Error("Unknown character \".\".")
+                }
                 this.tokens.push(new Token("number", buffer))
                 // check if there needs to be implied multiplication
                 if (this.input[this.position]?.match(/[a-zA-Z]/)) {
@@ -289,14 +292,13 @@ class Line {
         return this.answer
     }
 
-    #evaluateNode(node, skipPossible) {
+    #evaluateNode(node, returnString) {
 
-        if (skipPossible && node.type == "possible variable") {
-            return node.value
-        }
+        console.log(node)
+        console.log(returnString)
 
         if (node.type == 'number') {
-            let num = Number(node.value)
+            let num =  Number(node.value)
             if (isNaN(num)) {
                 throw new Error("Number \"" + node.value + "\" was not able to be parsed.")
             }
@@ -318,7 +320,7 @@ class Line {
 
                 // TODO how to assign variables in a whole calculator instead of just in this line
 
-                const rightValue = this.#evaluateNode(node.children[1], skipPossible)
+                const rightValue = this.#evaluateNode(node.children[1])
                 this.variables[leftNode.value] = rightValue
                 return rightValue
 
@@ -333,7 +335,6 @@ class Line {
 
                 // get equation for function
                 let functionNodeEquation = this.#evaluateNode(node.children[1], true)
-                console.log(node.children[1])
 
                 // check for invalid parameters
                 functionNodeParameters.some((node) => {
@@ -347,9 +348,11 @@ class Line {
 
                 let functionParameters = functionNodeParameters.map(parameter => parameter.value)
 
-                const formattedEquation = this.#formatEquation(functionNodeEquation)
+                const formattedEquation = functionNodeEquation?.type ? this.#formatEquation(functionNodeEquation): functionNodeEquation
 
+                console.log("prev", functionNodeEquation)
                 let functionString = `(${functionParameters})=>\`${formattedEquation}\``
+                console.log("post", functionString)
 
                 this.functions[functionName] = eval(functionString) // TODO: variables and functions arent working here
 
@@ -361,21 +364,28 @@ class Line {
 
         } else if (node.type == 'operator') {
 
-            const leftValue = this.#evaluateNode(node.children[0], skipPossible)
-            const rightValue = this.#evaluateNode(node.children[1], skipPossible)
-            return this.#evaluateOperator(node.value, leftValue, rightValue)
+            const leftValue = this.#evaluateNode(node.children[0], returnString)
+            const rightValue = this.#evaluateNode(node.children[1], returnString)
+            return this.#evaluateOperator(node.value, leftValue, rightValue, returnString)
 
         } else if (node.type == 'function') {
             // Handle function evaluation
-            return this.#evaluateFunction(node)
+            return this.#evaluateFunction(node, returnString)
+        } else if (returnString && node.type == "possible variable") {
+            return node.value
         } else {
-            throw new Error("Invalid node type \"" + node.type + "\".")
+            throw new Error("Invalid node type \"" + node.type + "\" (\"" + node.value + "\").")
         }
 
 
     }
 
-    #evaluateOperator(operator, left, right) {
+    #evaluateOperator(operator, left, right, returnString) {
+
+        if (returnString) {
+            return left + operator + right
+        }
+
         switch (operator) {
             case '+':
                 return left + right
@@ -395,8 +405,11 @@ class Line {
         }
     }
 
-    #evaluateFunction(node) {
-        let childrenAnswers = node.children.map(child => this.#evaluateNode(child))
+    #evaluateFunction(node, returnString) {
+        let childrenAnswers = node.children.map(child => this.#evaluateNode(child, returnString))
+        if (returnString && node.children.some(child => child.type == "possible variable")) {
+            return node.value + `(${childrenAnswers})`
+        }
         let currentFunction = this.functions?.[node.value]
         if (!currentFunction) {
             throw new Error("The function \"" + node.value + "\" does not exist.")
@@ -405,11 +418,7 @@ class Line {
             throw new Error("Not the correct number of arguments for the function \"" + node.value + "\"")
         }
         let formulaText = currentFunction(...childrenAnswers)
-        let formulaCalculator = new Line(formulaText, this.variables, this.functions)
-        formulaCalculator.tokenize()
-        formulaCalculator.parse()
-        let answer = formulaCalculator.evaluate()
-        return answer
+        return eval(formulaText)
     }
 
     getStoredAnswer() {
@@ -453,6 +462,7 @@ class Calculator {
             abs: (a) => `Math.abs(${a})`,
             ln: (a) => `Math.log(${a})`,
             round: (a) => `Math.round(${a})`,
+            test: (a,b) => `${a}+${b}`
         }
 
         this.debug = debug
@@ -472,14 +482,6 @@ class Calculator {
 
     getSolvedAnswers() {
         return this.answers
-    }
-
-    enableDebug() {
-        this.debug = true
-    }
-
-    disableDebug() {
-        this.debug = false
     }
 
     solveNext() {
