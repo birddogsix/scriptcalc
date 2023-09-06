@@ -2,6 +2,9 @@
  * TODO
  * fix function referencing for eval
  * make sure all tokens are being used and throw an error if not
+ * line referencing
+ * check if ans is being redefined and throw an error
+ * fix incorrect error throwing
  */
 
 class Token {
