@@ -1,3 +1,9 @@
+/**
+ * TODO
+ * fix function referencing for eval
+ * make sure all tokens are being used and throw an error if not
+ */
+
 class Token {
     constructor(type, value) {
         this.type = type
@@ -68,9 +74,16 @@ class Line {
                     buffer += this.input[this.position]
                     this.position++
                 } while (this.input[this.position]?.match(/[0-9.]/))
-                this.position--
 
                 this.tokens.push(new Token("number", buffer))
+                // check if there needs to be implied multiplication
+                if (this.input[this.position]?.match(/[a-zA-Z]/)) {
+                    this.tokens.push(new Token("operator", "*"))
+                }
+
+                // reverse position
+                this.position--
+
                 buffer = ""
             }
 
@@ -273,7 +286,13 @@ class Line {
         return this.answer
     }
 
-    #evaluateNode(node) {
+    #evaluateNode(node, skipPossible) {
+
+        console.log(node)
+
+        if (skipPossible && node.type == "possible variable") {
+            return node.value
+        }
 
         if (node.type == 'number') {
             let num = Number(node.value)
@@ -297,7 +316,7 @@ class Line {
 
                 // TODO how to assign variables in a whole calculator instead of just in this line
 
-                const rightValue = this.#evaluateNode(node.children[1])
+                const rightValue = this.#evaluateNode(node.children[1], skipPossible)
                 this.variables[leftNode.value] = rightValue
                 return rightValue
 
@@ -311,7 +330,8 @@ class Line {
                 let functionNodeParameters = leftNode.children
 
                 // get equation for function
-                let functionNodeEquation = node.children[1]
+                let functionNodeEquation = this.#evaluateNode(node.children[1], true)
+                console.log(node.children[1])
 
                 // check for invalid parameters
                 functionNodeParameters.some((node) => {
@@ -339,8 +359,8 @@ class Line {
 
         } else if (node.type == 'operator') {
 
-            const leftValue = this.#evaluateNode(node.children[0])
-            const rightValue = this.#evaluateNode(node.children[1])
+            const leftValue = this.#evaluateNode(node.children[0], skipPossible)
+            const rightValue = this.#evaluateNode(node.children[1], skipPossible)
             return this.#evaluateOperator(node.value, leftValue, rightValue)
 
         } else if (node.type == 'function') {
