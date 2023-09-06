@@ -53,7 +53,7 @@ class Line {
     }
 
     #isVariable(str) {
-        return !!this.variables?.[str]
+        return this.variables?.[str] != undefined
     }
 
     tokenize() {
@@ -291,8 +291,6 @@ class Line {
 
     #evaluateNode(node, skipPossible) {
 
-        console.log(node)
-
         if (skipPossible && node.type == "possible variable") {
             return node.value
         }
@@ -306,7 +304,8 @@ class Line {
         } else if (node.type == "variable") {
 
             let varAnswer = this.variables?.[node.value]
-            if (varAnswer) {
+            console.log(varAnswer)
+            if (varAnswer != undefined) {
                 return this.variables[node.value]
             } else {
                 throw new Error("Unknown variable \"" + node.value + "\"")
