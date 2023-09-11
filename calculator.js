@@ -154,7 +154,7 @@ class Line {
 
     parse() {
         if (this.input.length == 0) return
-        this.ast = this.#parseEqLevel()
+        this.ast = this.#parseLevel([`=`, `+-`, `*/`, `^`])
     }
 
     // Parentheses Level Priority
@@ -168,7 +168,7 @@ class Line {
         if (currentToken.type == 'number' || currentToken.type == 'variable' || currentToken.type == "possible variable") {
             return new Node(currentToken)
         } else if (currentToken.type == 'parenthesis' && currentToken.value == '(') {
-            const expressionNode = this.#parseEqLevel()
+            const expressionNode = this.#parseLevel([`=`, `+-`, `*/`, `^`])
             const closingParenthesisToken = this.tokens[this.tokenIndex]
             if (closingParenthesisToken.type == 'parenthesis' && closingParenthesisToken.value == ')') {
                 this.tokenIndex++
@@ -183,7 +183,7 @@ class Line {
             if (openingParenthesisToken.type == 'parenthesis' && openingParenthesisToken.value == '(') {
                 this.tokenIndex++
                 while (this.tokens[this.tokenIndex]?.type != 'parenthesis' || this.tokens[this.tokenIndex]?.value != ')') {
-                    functionNode.addChild(this.#parseEqLevel())
+                    functionNode.addChild(this.#parseLevel([`=`, `+-`, `*/`, `^`]))
                     if (this.tokens[this.tokenIndex]?.type == 'comma') {
                         this.tokenIndex++
                     }
@@ -198,92 +198,39 @@ class Line {
         }
     }
 
-    // Exponent Level Priority
-    #parseExpLevel() {
-        let leftNode = this.#parseParLevel()
+    #parseLevel(levels) {
+
+        let nextLevels = levels.slice(1)
+        const noMoreLevels = nextLevels.length == 0
+
+        let leftNode
+        if (noMoreLevels) {
+            leftNode = this.#parseParLevel()
+        } else {
+            leftNode = this.#parseLevel(nextLevels)
+        }
 
         while (this.tokenIndex < this.tokens.length) {
+
             const currentToken = this.tokens[this.tokenIndex]
 
-            // Check if the current token is an exponent operator
-            if (currentToken.type == 'operator' && `^`.includes(currentToken.value)) {
-                this.tokenIndex++
-                const operatorNode = new Node(currentToken)
-                operatorNode.addChild(leftNode)
+            if (!levels[0].includes(currentToken.value)) {
+                break   
+            }
+            this.tokenIndex++
+            const operatorNode = new Node(currentToken)
+            operatorNode.addChild(leftNode)
+            if (noMoreLevels) {
                 operatorNode.addChild(this.#parseParLevel())
-                leftNode = operatorNode
             } else {
-                break
+                operatorNode.addChild(this.#parseLevel(nextLevels))
             }
+            leftNode = operatorNode
+
         }
 
         return leftNode
-    }
 
-    // Multiplication Level Priority
-    #parseMultLevel() {
-        let leftNode = this.#parseExpLevel()
-
-        while (this.tokenIndex < this.tokens.length) {
-            const currentToken = this.tokens[this.tokenIndex]
-
-            // Check if the current token is a multiplication or division operator
-            if (currentToken.type == 'operator' && `*/`.includes(currentToken.value)) {
-                this.tokenIndex++
-                const operatorNode = new Node(currentToken)
-                operatorNode.addChild(leftNode)
-                operatorNode.addChild(this.#parseExpLevel())
-                leftNode = operatorNode
-            } else {
-                break
-            }
-        }
-
-        return leftNode
-    }
-
-    // Addition Level Priority
-    #parseAddLevel() {
-        let leftNode = this.#parseMultLevel()
-
-        while (this.tokenIndex < this.tokens.length) {
-            const currentToken = this.tokens[this.tokenIndex]
-
-            // Check if the current token is an addition or subtraction operator
-            if (currentToken.type == 'operator' && `+-`.includes(currentToken.value)) {
-                this.tokenIndex++
-                const operatorNode = new Node(currentToken)
-                operatorNode.addChild(leftNode)
-                operatorNode.addChild(this.#parseMultLevel())
-                leftNode = operatorNode
-            } else {
-                break
-            }
-        }
-
-        return leftNode
-    }
-
-    // Addition Level Priority
-    #parseEqLevel() {
-        let leftNode = this.#parseAddLevel()
-
-        while (this.tokenIndex < this.tokens.length) {
-            const currentToken = this.tokens[this.tokenIndex]
-
-            // Check if the current token is an addition or subtraction operator
-            if (currentToken.type == 'assignment') {
-                this.tokenIndex++
-                const operatorNode = new Node(currentToken)
-                operatorNode.addChild(leftNode)
-                operatorNode.addChild(this.#parseAddLevel())
-                leftNode = operatorNode
-            } else {
-                break
-            }
-        }
-
-        return leftNode
     }
 
     evaluate() {
@@ -294,11 +241,11 @@ class Line {
 
     #evaluateNode(node, returnString) {
 
-        console.log(node)
-        console.log(returnString)
+        // console.log(node)
+        // console.log(returnString)
 
         if (node.type == 'number') {
-            let num =  Number(node.value)
+            let num = Number(node.value)
             if (isNaN(num)) {
                 throw new Error("Number \"" + node.value + "\" was not able to be parsed.")
             }
@@ -306,7 +253,7 @@ class Line {
         } else if (node.type == "variable") {
 
             let varAnswer = this.variables?.[node.value]
-            console.log(varAnswer)
+            // console.log(varAnswer)
             if (varAnswer != undefined) {
                 return this.variables[node.value]
             } else {
@@ -348,11 +295,11 @@ class Line {
 
                 let functionParameters = functionNodeParameters.map(parameter => parameter.value)
 
-                const formattedEquation = functionNodeEquation?.type ? this.#formatEquation(functionNodeEquation): functionNodeEquation
+                const formattedEquation = functionNodeEquation?.type ? this.#formatEquation(functionNodeEquation) : functionNodeEquation
 
-                console.log("prev", functionNodeEquation)
+                // console.log("prev", functionNodeEquation)
                 let functionString = `(${functionParameters})=>\`${formattedEquation}\``
-                console.log("post", functionString)
+                // console.log("post", functionString)
 
                 this.functions[functionName] = eval(functionString) // TODO: variables and functions arent working here
 
@@ -462,7 +409,7 @@ class Calculator {
             abs: (a) => `Math.abs(${a})`,
             ln: (a) => `Math.log(${a})`,
             round: (a) => `Math.round(${a})`,
-            test: (a,b) => `${a}+${b}`
+            test: (a, b) => `${a}+${b}`
         }
 
         this.debug = debug
