@@ -83,7 +83,7 @@ class Line {
                 }
                 this.tokens.push(new Token("number", buffer))
                 // check if there needs to be implied multiplication
-                if (this.input[this.position]?.match(/[a-zA-Z]/)) {
+                if (this.input[this.position]?.match(/[a-zA-Z(]/)) {
                     this.tokens.push(new Token("operator", "*"))
                 }
 
@@ -140,6 +140,9 @@ class Line {
 
             } else if (char == "(" || char == ")") {
                 this.tokens.push(new Token("parenthesis", char))
+                if (char == ")" && this.input[this.position + 1]?.match(/[a-zA-Z0-9(]/)) {
+                    this.tokens.push(new Token("operator", "*"))
+                }
             } else if (char == ",") {
                 this.tokens.push(new Token("comma", char))
             } else if (char == "=") {
@@ -236,11 +239,11 @@ class Line {
 
     evaluate() {
         if (this.input.length == 0) return
-        this.answer = this.#evaluateNode(this.ast, ["i"])
+        this.answer = this.#evaluateNode(this.ast)
         return this.answer
     }
 
-    #evaluateNode(node, varKeeps) {
+    #evaluateNode(node, varKeeps = []) {
 
         const currentValue = node.value
         switch (node.type) {
@@ -251,16 +254,91 @@ class Line {
                 return num
 
             case "variable":
+            case "possible variable":
                 if (varKeeps.includes(currentValue)) return currentValue
                 const varAns = this.variables?.[currentValue]
-                if //todo
-                break
+                if (varAns == undefined) throw new Error("Unknown variable \"" + currentValue + "\"")
+                return this.variables[currentValue]
+
+            case "assignment":
+                const assignTo = node.children[0]
+
+                switch (assignTo.type) {
+                    case "variable":
+                    case "possible variable":
+                        let varValue = this.#evaluateNode(node.children[1])
+                        this.variables[assignTo.value] = varValue
+                        return varValue
+                    
+                    case "function":
+                    case "possible function":
+                        const functionName = assignTo.value
+
+                        const functionParams = assignTo.children
+                        if (functionParams.some(param => param.type != "variable" && param.type != "possible variable")) {
+                            throw new Error("Invalid function parameters")
+                        }
+
+                        let funcValue = this.#evaluateNode(node.children[1], functionParams)
+                        console.log(funcValue)
+
+                        break
+
+                    default:
+                        throw new Error("Invalid assignment.")
+                }
+
+                return
+
+            case "operator":
+                const leftValue = this.#evaluateNode(node.children[0], varKeeps)
+                const rightValue = this.#evaluateNode(node.children[1], varKeeps)
+                return this.#evaluateOperator(currentValue, leftValue, rightValue, varKeeps)
+
+            case "function":
+                return
+
+            case "possible function":
+                throw new Error("Function \"" + currentValue + "\" does not exist")
 
             default:
-                break
+                throw new Error("Uknown node type \"" + node.type + "\".")
         }
 
     }
+
+    #evaluateOperator(operator, left, right, varKeeps) {
+
+        if (varKeeps.some(keep => String(left).includes(keep)) || varKeeps.some(keep => String(right).includes(keep))) {
+            return left + operator + right
+        }
+
+        switch (operator) {
+            case '+':
+                return left + right
+            case '-':
+                return left - right
+            case '*':
+                return left * right
+            case '/':
+                if (right == 0) {
+                    throw new Error("Division by zero.")
+                }
+                return left / right
+            case '^':
+                return left ** right
+            default:
+                throw new Error("Unknown operator \"" + operator + "\"")
+        }
+    }
+    // else if (node.type == 'function') {
+        //         // Handle function evaluation
+        //         return this.#evaluateFunction(node, returnString)
+        //     } else if (returnString && node.type == "possible variable") {
+        //         return node.value
+        //     } else {
+        //         throw new Error("Invalid node type \"" + node.type + "\" (\"" + node.value + "\").")
+        //     }
 
     // #evaluateNode(node, returnString) {
 
@@ -288,15 +366,11 @@ class Line {
     //         const leftNode = node.children[0]
     //         if (leftNode.type == "possible variable" || leftNode.type == "variable") {
 
-    //             // TODO how to assign variables in a whole calculator instead of just in this line
-
     //             const rightValue = this.#evaluateNode(node.children[1])
     //             this.variables[leftNode.value] = rightValue
     //             return rightValue
 
     //         } else if (leftNode.type == "possible function" || leftNode.type == "function") {
-
-    //             // TODO how to assign functions in a whole calculator instead of just in this line
 
     //             const functionName = leftNode.value
 
