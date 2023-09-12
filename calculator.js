@@ -1,8 +1,6 @@
 /**
  * TODO
  * make sure all tokens are being used and throw an error if not
- * line referencing
- * check if ans is being redefined and throw an error
  * fix incorrect error throwing
  */
 
@@ -30,7 +28,7 @@ class Line {
 
     constructor(input, variables, functions) {
 
-        this.answer = "error"
+        this.answer
 
         // for tokenization
         this.input = input
@@ -161,7 +159,7 @@ class Line {
 
     #parseParLevel() {
         if (this.tokenIndex >= this.tokens.length) {
-            throw new Error("Missing closing parenthesis.")
+            throw new Error("Invalid syntax")
         }
         const currentToken = this.tokens[this.tokenIndex]
         this.tokenIndex++
@@ -170,7 +168,8 @@ class Line {
             return new Node(currentToken)
         } else if (currentToken.type == 'parenthesis' && currentToken.value == '(') {
             const expressionNode = this.#parseLevel()
-            const closingParenthesisToken = this.tokens[this.tokenIndex]
+            const closingParenthesisToken = this.tokens?.[this.tokenIndex]
+            if (!closingParenthesisToken) throw new Error("Missing closing parenthesis")
             if (closingParenthesisToken.type == 'parenthesis' && closingParenthesisToken.value == ')') {
                 this.tokenIndex++
                 return expressionNode
@@ -257,6 +256,9 @@ class Line {
                 switch (assignTo.type) {
                     case "variable":
                     case "possible variable":
+                        if (assignTo.value == "ans") {
+                            throw new Error("Invalid redefinition of reserved variable \"ans\"")
+                        }
                         let varValue = this.#evaluateNode(node.children[1])
                         this.variables[assignTo.value] = varValue
                         return varValue
