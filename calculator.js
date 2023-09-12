@@ -253,13 +253,6 @@ class Line {
                 if (isNaN(num)) throw new Error("Number \"" + currentValue + "\" was not able to be parsed.")
                 return num
 
-            case "variable":
-            case "possible variable":
-                if (varKeeps.includes(currentValue)) return currentValue
-                const varAns = this.variables?.[currentValue]
-                if (varAns == undefined) throw new Error("Unknown variable \"" + currentValue + "\"")
-                return this.variables[currentValue]
-
             case "assignment":
                 const assignTo = node.children[0]
 
@@ -269,19 +262,19 @@ class Line {
                         let varValue = this.#evaluateNode(node.children[1])
                         this.variables[assignTo.value] = varValue
                         return varValue
-                    
+
                     case "function":
                     case "possible function":
                         const functionName = assignTo.value
 
-                        const functionParams = assignTo.children
-                        if (functionParams.some(param => param.type != "variable" && param.type != "possible variable")) {
+                        const functionParamNodes = assignTo.children
+                        if (functionParamNodes.some(param => param.type != "variable" && param.type != "possible variable")) {
                             throw new Error("Invalid function parameters")
                         }
+                        const functionParams = functionParamNodes.map(child => child.value)
 
-                        let funcValue = this.#evaluateNode(node.children[1], functionParams)
-                        console.log(funcValue)
-
+                        let functionValue = `(${functionParams})=>\`${this.#evaluateNode(node.children[1], functionParams)}\``
+                        this.functions[functionName] = eval(functionValue)
                         break
 
                     default:
@@ -290,13 +283,23 @@ class Line {
 
                 return
 
+            case "variable":
+            case "possible variable":
+                if (varKeeps.includes(currentValue)) return `\${${currentValue}}`
+                const varAns = this.variables?.[currentValue]
+                if (varAns == undefined) throw new Error("Unknown variable \"" + currentValue + "\"")
+                return this.variables[currentValue]
+
             case "operator":
                 const leftValue = this.#evaluateNode(node.children[0], varKeeps)
                 const rightValue = this.#evaluateNode(node.children[1], varKeeps)
                 return this.#evaluateOperator(currentValue, leftValue, rightValue, varKeeps)
 
             case "function":
-                return
+                let currentFunc = this.functions[currentValue]
+                let funcParams = node.children
+                console.log(("" + currentFunc(this.#evaluateNode(funcParams))))
+                return eval(this.functions[currentValue](node.children.map(child => this.#evaluateNode(child))))
 
             case "possible function":
                 throw new Error("Function \"" + currentValue + "\" does not exist")
@@ -331,159 +334,7 @@ class Line {
                 throw new Error("Unknown operator \"" + operator + "\"")
         }
     }
-    // else if (node.type == 'function') {
-        //         // Handle function evaluation
-        //         return this.#evaluateFunction(node, returnString)
-        //     } else if (returnString && node.type == "possible variable") {
-        //         return node.value
-        //     } else {
-        //         throw new Error("Invalid node type \"" + node.type + "\" (\"" + node.value + "\").")
-        //     }
 
-    // #evaluateNode(node, returnString) {
-
-    //     // console.log(node)
-    //     // console.log(returnString)
-
-    //     if (node.type == 'number') {
-    //         let num = Number(node.value)
-    //         if (isNaN(num)) {
-    //             throw new Error("Number \"" + node.value + "\" was not able to be parsed.")
-    //         }
-    //         return num
-    //     } else if (node.type == "variable") {
-
-    //         let varAnswer = this.variables?.[node.value]
-    //         // console.log(varAnswer)
-    //         if (varAnswer != undefined) {
-    //             return this.variables[node.value]
-    //         } else {
-    //             throw new Error("Unknown variable \"" + node.value + "\"")
-    //         }
-
-    //     } else if (node.type == "assignment") {
-
-    //         const leftNode = node.children[0]
-    //         if (leftNode.type == "possible variable" || leftNode.type == "variable") {
-
-    //             const rightValue = this.#evaluateNode(node.children[1])
-    //             this.variables[leftNode.value] = rightValue
-    //             return rightValue
-
-    //         } else if (leftNode.type == "possible function" || leftNode.type == "function") {
-
-    //             const functionName = leftNode.value
-
-    //             // get parameters
-    //             let functionNodeParameters = leftNode.children
-
-    //             // get equation for function
-    //             let functionNodeEquation = this.#evaluateNode(node.children[1], true)
-
-    //             // check for invalid parameters
-    //             functionNodeParameters.some((node) => {
-    //                 const isParameter = ["possible variable", "possible function", "variable", "function"].includes(node.type)
-    //                 if (isParameter) {
-    //                     return true
-    //                 } else {
-    //                     throw new Error("Invalid parameter \"" + node.value + "\" for function assignment \"" + functionName + "\"")
-    //                 }
-    //             })
-
-    //             let functionParameters = functionNodeParameters.map(parameter => parameter.value)
-
-    //             const formattedEquation = functionNodeEquation?.type ? this.#formatEquation(functionNodeEquation) : functionNodeEquation
-
-    //             // console.log("prev", functionNodeEquation)
-    //             let functionString = `(${functionParameters})=>\`${formattedEquation}\``
-    //             // console.log("post", functionString)
-
-    //             this.functions[functionName] = eval(functionString) // TODO: variables and functions arent working here
-
-    //             return
-
-    //         } else {
-    //             throw new Error("Invalid assignment to \"" + leftNode.value + "\"")
-    //         }
-
-    //     } else if (node.type == 'operator') {
-
-    //         const leftValue = this.#evaluateNode(node.children[0], returnString)
-    //         const rightValue = this.#evaluateNode(node.children[1], returnString)
-    //         return this.#evaluateOperator(node.value, leftValue, rightValue, returnString)
-
-    //     } else if (node.type == 'function') {
-    //         // Handle function evaluation
-    //         return this.#evaluateFunction(node, returnString)
-    //     } else if (returnString && node.type == "possible variable") {
-    //         return node.value
-    //     } else {
-    //         throw new Error("Invalid node type \"" + node.type + "\" (\"" + node.value + "\").")
-    //     }
-
-
-    // }
-
-    // #evaluateOperator(operator, left, right, returnString) {
-
-    //     if (returnString) {
-    //         return left + operator + right
-    //     }
-
-    //     switch (operator) {
-    //         case '+':
-    //             return left + right
-    //         case '-':
-    //             return left - right
-    //         case '*':
-    //             return left * right
-    //         case '/':
-    //             if (right == 0) {
-    //                 throw new Error("Division by zero.")
-    //             }
-    //             return left / right
-    //         case '^':
-    //             return left ** right
-    //         default:
-    //             throw new Error("Unknown operator \"" + operator + "\"")
-    //     }
-    // }
-
-    // #evaluateFunction(node, returnString) {
-    //     let childrenAnswers = node.children.map(child => this.#evaluateNode(child, returnString))
-    //     if (returnString && node.children.some(child => child.type == "possible variable")) {
-    //         return node.value + `(${childrenAnswers})`
-    //     }
-    //     let currentFunction = this.functions?.[node.value]
-    //     if (!currentFunction) {
-    //         throw new Error("The function \"" + node.value + "\" does not exist.")
-    //     }
-    //     if (currentFunction.length != node.children.length) {
-    //         throw new Error("Not the correct number of arguments for the function \"" + node.value + "\"")
-    //     }
-    //     let formulaText = currentFunction(...childrenAnswers)
-    //     return eval(formulaText)
-    // }
-
-    // #formatEquation(node) {
-    //     if (node.type == "function") {
-    //         // TODO finish function replacement
-    //         let currentFunc = this.functions[node.value]
-    //         let subParameters = node.children.map(child => this.#formatEquation(child))
-    //         if (subParameters.length != currentFunc.length) {
-    //             throw new Error("Incorrect number of parameters for the function \"" + node.value + "\".")
-    //         }
-    //         return currentFunc(...subParameters)
-    //     } else if (node.type == "operator") {
-    //         let left = this.#formatEquation(node.children[0])
-    //         let right = this.#formatEquation(node.children[1])
-    //         return `${left}${node.value}${right}`
-    //     } else if (node.type == "assignment") {
-    //         throw new Error("Invalid assignment.")
-    //     } else {
-    //         return `\${${node.value}}`
-    //     }
-    // }
 
     getStoredAnswer() {
         return this.answer
@@ -506,7 +357,6 @@ class Calculator {
             abs: (a) => `Math.abs(${a})`,
             ln: (a) => `Math.log(${a})`,
             round: (a) => `Math.round(${a})`,
-            test: (a, b) => `${a}+${b}`
         }
 
         this.debug = debug
