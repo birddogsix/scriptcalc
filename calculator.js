@@ -1,6 +1,5 @@
 /**
  * TODO
- * fix function referencing for eval
  * make sure all tokens are being used and throw an error if not
  * line referencing
  * check if ans is being redefined and throw an error
@@ -156,11 +155,10 @@ class Line {
     }
 
     parse() {
-        if (this.input.length == 0) return
-        this.ast = this.#parseLevel([`=`, `+-`, `*/`, `^`])
+        if (this.tokens.length == 0) throw new Error("Input not tokenized.")
+        this.ast = this.#parseLevel()
     }
 
-    // Parentheses Level Priority
     #parseParLevel() {
         if (this.tokenIndex >= this.tokens.length) {
             throw new Error("Missing closing parenthesis.")
@@ -171,7 +169,7 @@ class Line {
         if (currentToken.type == 'number' || currentToken.type == 'variable' || currentToken.type == "possible variable") {
             return new Node(currentToken)
         } else if (currentToken.type == 'parenthesis' && currentToken.value == '(') {
-            const expressionNode = this.#parseLevel([`=`, `+-`, `*/`, `^`])
+            const expressionNode = this.#parseLevel()
             const closingParenthesisToken = this.tokens[this.tokenIndex]
             if (closingParenthesisToken.type == 'parenthesis' && closingParenthesisToken.value == ')') {
                 this.tokenIndex++
@@ -186,7 +184,7 @@ class Line {
             if (openingParenthesisToken.type == 'parenthesis' && openingParenthesisToken.value == '(') {
                 this.tokenIndex++
                 while (this.tokens[this.tokenIndex]?.type != 'parenthesis' || this.tokens[this.tokenIndex]?.value != ')') {
-                    functionNode.addChild(this.#parseLevel([`=`, `+-`, `*/`, `^`]))
+                    functionNode.addChild(this.#parseLevel())
                     if (this.tokens[this.tokenIndex]?.type == 'comma') {
                         this.tokenIndex++
                     }
@@ -201,7 +199,7 @@ class Line {
         }
     }
 
-    #parseLevel(levels) {
+    #parseLevel(levels = [`=`, `+-`, `*/`, `^`]) {
 
         let nextLevels = levels.slice(1)
         const noMoreLevels = nextLevels.length == 0
@@ -238,7 +236,7 @@ class Line {
     }
 
     evaluate() {
-        if (this.input.length == 0) return
+        if (!this.ast) throw new Error("Input not parsed.")
         this.answer = this.#evaluateNode(this.ast)
         return this.answer
     }
@@ -273,15 +271,14 @@ class Line {
                         }
                         const functionParams = functionParamNodes.map(child => child.value)
 
-                        let functionValue = `(${functionParams})=>\`${this.#evaluateNode(node.children[1], functionParams)}\``
+                        let insideFunction = this.#evaluateNode(node.children[1], functionParams)
+                        let functionValue = `(${functionParams})=>\`${insideFunction}\``
                         this.functions[functionName] = eval(functionValue)
-                        break
+                        return
 
                     default:
                         throw new Error("Invalid assignment.")
                 }
-
-                return
 
             case "variable":
             case "possible variable":
@@ -298,8 +295,12 @@ class Line {
             case "function":
                 let currentFunc = this.functions[currentValue]
                 let funcParams = node.children
-                console.log(("" + currentFunc(this.#evaluateNode(funcParams))))
-                return eval(this.functions[currentValue](node.children.map(child => this.#evaluateNode(child))))
+                let simplifiedParams = funcParams.map(param => this.#evaluateNode(param, varKeeps))
+                const funcString = currentFunc(...simplifiedParams)
+                if (varKeeps.length > 0) {
+                    return funcString
+                }
+                return eval(funcString)
 
             case "possible function":
                 throw new Error("Function \"" + currentValue + "\" does not exist")
@@ -310,9 +311,9 @@ class Line {
 
     }
 
-    #evaluateOperator(operator, left, right, varKeeps) {
+    #evaluateOperator(operator, left, right, varKeeps = []) {
 
-        if (varKeeps.some(keep => String(left).includes(keep)) || varKeeps.some(keep => String(right).includes(keep))) {
+        if (varKeeps.some(keep => String(left).includes(keep) || String(right).includes(keep))) {
             return left + operator + right
         }
 
@@ -334,7 +335,6 @@ class Line {
                 throw new Error("Unknown operator \"" + operator + "\"")
         }
     }
-
 
     getStoredAnswer() {
         return this.answer
