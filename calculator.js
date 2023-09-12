@@ -124,13 +124,16 @@ class Line {
                 } else if (this.#isVariable(buffer)) {
                     this.tokens.push(new Token("variable", buffer))
                 } else {
-                    // either a new assignment or an error
                     const nextChar = this.input?.[this.position + 1]
                     if (nextChar == "(") {
                         this.tokens.push(new Token("possible function", buffer))
                     } else {
                         this.tokens.push(new Token("possible variable", buffer))
                     }
+                }
+
+                if (this.input?.[this.position + 1]?.match(/[0-9.]/)) {
+                    this.tokens.push(new Token("operator", "*"))
                 }
 
                 buffer = ""
