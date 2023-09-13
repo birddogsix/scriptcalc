@@ -1,7 +1,8 @@
 html {
   margin: 0;
   width: 100%;
-  height: 100%
+  height: 100%;
+
 }
 
 body {
@@ -9,7 +10,7 @@ body {
   width: 100%;
   height: 100%;
 
-  background-color: #151515;
+  overflow: hidden;
 
   margin: 0;
   display: flex;
@@ -21,29 +22,47 @@ body {
 }
 
 .editor {
+  margin: 0;
   display: flex;
   width: 100%;
   height: 100%;
 }
 
 #lineNumbers {
+  margin: 0;
+  background-color: #252525;
+  width: 65px;
+  height: auto;
+  resize: none;
+  outline: none;
+  border: none;
   font-size: 30px;
   color: #FFFFFF;
+  text-align: center;
+  overflow-y: hidden;
 }
 
 #calcAnswers {
-  margin: 5px;
+  margin: 0;
+  background-color: #151515;
+  width: 500px;
+  height: auto;
+  resize: none;
+  outline: none;
+  border: none;
   font-size: 30px;
   color: #FFFFFF;
+  overflow-y: hidden;
 }
 
-textarea {
-  background-color: #202020;
-  font-size: 30px;
+#codeText {
+  background-image: linear-gradient(#181818 50%, #191919 50%);
+  background-size: 100% 70px;
+
   color: #FFFFFF;
-  /* margin-top: 1%;
-  margin-left: 1%; */
-  width: 50%;
+  margin: 0;
+  width: 100%;
+  font-size: 30px;
   height: auto;
   resize: none;
   outline: none;

@@ -10,9 +10,10 @@
 <body>
 
   <div class="editor">
-    <div id="lineNumbers"></div>
-    <textarea onkeyup="updateCalculations(event.target)" id="codeText" spellcheck="false"></textarea>
-    <div id="calcAnswers"></div>
+    <!-- <div id="lineNumbers"></div> -->
+    <textarea readonly id="lineNumbers"></textarea>
+    <textarea onkeyup="updateCalculations(event.target);updateLineNumbers(event.target)" onscroll="updatePositions()" id="codeText" spellcheck="false"></textarea>
+    <textarea readonly id="calcAnswers"></textarea>
   </div>
 
 </body>
