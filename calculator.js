@@ -276,7 +276,7 @@ class Line {
                         }
                         const functionParams = functionParamNodes.map(child => child.value)
 
-                        let insideFunction = this.#evaluateNode(node.children[1], functionParams).replace("^", "**")
+                        let insideFunction = `${this.#evaluateNode(node.children[1], functionParams)}`.replace("^","**")
                         let functionValue = `(${functionParams})=>\`${insideFunction}\``
                         this.functions[functionName] = eval(functionValue)
                         return
